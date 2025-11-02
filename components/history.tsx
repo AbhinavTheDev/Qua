@@ -55,11 +55,10 @@ export default function HistoryTab({ loadFromHistory }: HistoryProps) {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Request History</CardTitle>
+          <CardTitle>History</CardTitle>
           {history.length > 0 && (
             <Button variant="outline" size="sm" onClick={clearHistory}>
               <Trash2 className="w-4 h-4 mr-2" />
-              Clear History
             </Button>
           )}
         </CardHeader>

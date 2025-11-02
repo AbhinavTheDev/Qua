@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "API-Buddy",
+  title: "Qua",
   description: "Test Rest APIs with ease",
 };
 

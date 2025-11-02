@@ -1,4 +1,7 @@
 "use client";
+import { useState, useEffect } from "react";
+import { Send } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,23 +14,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Send } from "lucide-react";
-import { useState, useEffect } from "react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+  SidebarSeparator,
+  SidebarTrigger,
+  SidebarRail,
+} from "@/components/ui/sidebar";
+
 import { ApiRequest, ApiResponse } from "@/lib/constants";
 import Highlighter from "./highlighter";
 import HistoryTab from "./history";
 
 export default function Homepage() {
-  const [activeTab, setActiveTab] = useState("playground");
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("");
   const [headers, setHeaders] = useState("");
   const [body, setBody] = useState("");
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<ApiRequest[]>([]);
 
   const parseHeaders = (headerString: string): Record<string, string> => {
     const headers: Record<string, string> = {};
@@ -47,25 +56,6 @@ export default function Homepage() {
       .map(([key, value]) => `${key}: ${value}`)
       .join("\n");
   };
-  // Fetch history from API
-  const fetchHistory = async () => {
-    const res = await fetch("/api/history");
-    const data = await res.json();
-    setHistory(
-      data.map((h: any) => ({
-        id: h.id.toString(),
-        method: h.method,
-        url: h.url,
-        headers: JSON.parse(h.headers),
-        body: h.body,
-        timestamp: new Date(h.createdAt),
-      }))
-    );
-  };
-
-  useEffect(() => {
-    fetchHistory();
-  }, []);
 
   const sendRequest = async () => {
     if (!url.trim()) return;
@@ -86,14 +76,10 @@ export default function Homepage() {
 
       const response = await fetch("/api/request", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url,
-          requestOptions,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, requestOptions }),
       });
+
       const responseTime = Date.now() - startTime;
       const responseText = await response.json();
 
@@ -114,14 +100,8 @@ export default function Homepage() {
       await fetch("/api/history", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          method,
-          url,
-          headers: parsedHeaders,
-          body,
-        }),
+        body: JSON.stringify({ method, url, headers: parsedHeaders, body }),
       });
-      await fetchHistory();
     } catch (error) {
       setResponse({
         status: 0,
@@ -140,7 +120,6 @@ export default function Homepage() {
     setUrl(request.url);
     setHeaders(formatHeaders(request.headers));
     setBody(request.body);
-    setActiveTab("playground");
   };
 
   const getStatusColor = (status: number) => {
@@ -151,20 +130,33 @@ export default function Homepage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">API Buddy</h1>
-          <p className="text-gray-600 mt-1">Test REST APIs with ease</p>
-        </div>
+    <SidebarProvider>
+      <Sidebar variant="inset">
+        <SidebarHeader className="pb-0">
+          <div className="px-2 pt-2">
+            <h1 className="text-xl font-semibold leading-tight">Qua</h1>
+            <p className="text-xs text-gray-500">Test REST APIs with ease</p>
+          </div>
+        </SidebarHeader>
+        <SidebarSeparator />
+        <SidebarContent>
+          <div className="p-2">
+            <HistoryTab loadFromHistory={loadFromHistory} />
+          </div>
+        </SidebarContent>
+        <SidebarRail />
+      </Sidebar>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="playground">API Playground</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
+      <SidebarInset>
+        <header className="flex h-14 items-center gap-2 border-b p-4">
+          <SidebarTrigger />
+          <div>
+            <h1 className="text-xl font-semibold leading-tight">Request Playground</h1>
+          </div>
+        </header>
 
-          <TabsContent value="playground" className="space-y-6">
+        <div className="p-4">
+          <div className="max-w-6xl mx-auto space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Request</CardTitle>
@@ -191,10 +183,7 @@ export default function Homepage() {
                     onChange={(e) => setUrl(e.target.value)}
                     className="flex-1"
                   />
-                  <Button
-                    onClick={sendRequest}
-                    disabled={loading || !url.trim()}
-                  >
+                  <Button onClick={sendRequest} disabled={loading || !url.trim()}>
                     {loading ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
@@ -208,7 +197,7 @@ export default function Homepage() {
                   <Label htmlFor="headers">Headers</Label>
                   <Textarea
                     id="headers"
-                    placeholder="Content-Type: application/json&#10;Authorization: Bearer token"
+                    placeholder={"Content-Type: application/json\nAuthorization: Bearer token"}
                     value={headers}
                     onChange={(e) => setHeaders(e.target.value)}
                     rows={3}
@@ -236,33 +225,23 @@ export default function Homepage() {
                   <CardTitle className="flex items-center justify-between">
                     Response
                     <div className="flex items-center gap-4 text-sm">
-                      <span
-                        className={`font-medium ${getStatusColor(
-                          response.status
-                        )}`}
-                      >
+                      <span className={`font-medium ${getStatusColor(response.status)}`}>
                         {response.status} {response.statusText}
                       </span>
-                      <span className="text-gray-500">
-                        {response.responseTime}ms
-                      </span>
+                      <span className="text-gray-500">{response.responseTime}ms</span>
                     </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <Label className="text-sm font-medium">
-                      Response Headers
-                    </Label>
+                    <Label className="text-sm font-medium">Response Headers</Label>
                     <ScrollArea className="h-24 w-full border rounded-md p-2 mt-1">
                       <pre className="text-xs text-gray-600">
-                        {Object.entries(response.headers).map(
-                          ([key, value]) => (
-                            <div key={key}>
-                              {key}: {value}
-                            </div>
-                          )
-                        )}
+                        {Object.entries(response.headers).map(([key, value]) => (
+                          <div key={key}>
+                            {key}: {value}
+                          </div>
+                        ))}
                       </pre>
                     </ScrollArea>
                   </div>
@@ -281,13 +260,9 @@ export default function Homepage() {
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
-
-          <TabsContent value="history">
-            <HistoryTab loadFromHistory={loadFromHistory} />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
